@@ -14,5 +14,5 @@ app.add_url_rule('/', view_func=view_func)
 
 if __name__ == '__main__':
     host = os.environ.get('SPACY_HOST', '0.0.0.0')
-    port = os.environ.get('SPACY_PORT', 8080)
+    port = os.environ.get('SPACY_PORT', 80)
     app.run(host=host, port=port)
