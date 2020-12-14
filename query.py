@@ -1,4 +1,5 @@
 import spacy
+from negspacy.negation import Negex
 from graphene import ObjectType, Field, String
 
 from schema import NLP, Doc, Token, Span, Cat, Meta
@@ -10,6 +11,10 @@ MODELS = {}
 def get_model(name: str):
     if name not in MODELS:
         MODELS[name] = spacy.load(name)
+        negex = Negex(MODELS[name], language="en_clinical",
+                      chunk_prefix=["no"])
+        MODELS[name].add_pipe(negex)
+
     return MODELS[name]
 
 
@@ -67,7 +72,8 @@ def get_span(span: spacy.tokens.Span) -> Span:
         start_char=span.start_char,
         end_char=span.end_char,
         label=span.label,
-        label_=span.label_
+        label_=span.label_,
+        negex=span._.negex is False
     )
 
 
@@ -93,23 +99,24 @@ def get_doc(doc):
     tokens = [get_token(token) for token in doc]
     ents = [get_span(ent) for ent in doc.ents]
     sents = [get_span(sent) for sent in doc.sents]
-    cats = [get_cats(label, score) for label, score in doc.cats.items()]
+    # cats = [get_cats(label, score) for label, score in doc.cats.items()]
     return Doc(
         text=doc.text,
         text_with_ws=doc.text_with_ws,
         tokens=tokens,
         ents=ents,
         sents=sents,
-        cats=cats
+        # cats=cats
     )
 
 
 class Query(ObjectType):
     nlp = Field(NLP,
-        text=String(required=True, description="The text to process"),
-        model=String(required=True, description="The name of the model to use"),
-        description="The nlp object used to process a text"
-    )
+                text=String(required=True, description="The text to process"),
+                model=String(
+                    required=True, description="The name of the model to use"),
+                description="The nlp object used to process a text"
+                )
 
     def resolve_nlp(self, info, text, model):
         _nlp = get_model(model)
